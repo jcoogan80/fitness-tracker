@@ -600,10 +600,35 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 <script>
 // ═══════════════════════════════════════════════
-// DATA
+// SUPABASE CLIENT
 // ═══════════════════════════════════════════════
-let metrics = JSON.parse(localStorage.getItem('bbb_metrics') || '[]');
-let wlogs   = JSON.parse(localStorage.getItem('bbb_wlogs')   || '[]');
+const SUPA_URL = 'https://tnizrvmbeqxnaydrardv.supabase.co';
+const SUPA_KEY = 'sb_publishable_CpLAiKjZ532BmzkaCLkMmg_o50lJSeI';
+
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(SUPA_URL + '/rest/v1/' + path, {
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=representation',
+      ...opts.headers
+    },
+    ...opts
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+// ═══════════════════════════════════════════════
+// DATA  (in-memory cache, synced from Supabase)
+// ═══════════════════════════════════════════════
+let metrics = [];
+let wlogs   = [];
 let curPhase= localStorage.getItem('bbb_phase') || '';
 
 const MUSCLES = ['Back','Chest','Thighs','Bicep','Tricep','Delts','Calves','Abs'];
@@ -690,18 +715,43 @@ const CYCLE_NAMES  = { A:'Endurance', B:'Strength', C:'Power' };
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
-function init() {
+async function init() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('m-date').value   = today;
   document.getElementById('wl-date').value  = today;
   document.getElementById('today-date-sub').textContent = new Date().toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
   buildMuscleFields();
-  renderTodayWorkout();
-  renderMetricTable();
-  renderWLHistory();
   if (curPhase) { highlightPhaseBtn(curPhase); renderPhaseDisplay(curPhase); }
+  renderTodayWorkout();
+  await loadAll();
 }
 init();
+
+async function loadAll() {
+  try {
+    setLoading(true);
+    const [m, w] = await Promise.all([
+      sbFetch('metrics?order=date.asc'),
+      sbFetch('workout_logs?order=date.asc,day.asc')
+    ]);
+    metrics = m.map(r => ({ date: r.date, w: r.weight_lbs, b: r.bmi, f: r.body_fat_pct, id: r.id }));
+    wlogs   = w.map(r => ({ date: r.date, phase: r.phase, day: r.day, cycle: r.cycle, muscles: r.muscles || {}, notes: r.notes, id: r.id }));
+    renderMetricTable();
+    renderWLHistory();
+  } catch(e) {
+    console.error('Load error:', e);
+    toast('⚠ Could not load data');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function setLoading(on) {
+  document.querySelectorAll('.btn-acc').forEach(b => {
+    if (on) b.setAttribute('disabled','1');
+    else b.removeAttribute('disabled');
+  });
+}
 
 // ═══════════════════════════════════════════════
 // NAV
@@ -736,6 +786,7 @@ function setPhase(key) {
   renderTodayWorkout();
   toast('Phase set: ' + BBB[key].name);
 }
+
 
 function highlightPhaseBtn(key) {
   document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('active'));
@@ -842,41 +893,47 @@ function expandDay(idx) {
 // ═══════════════════════════════════════════════
 // METRICS
 // ═══════════════════════════════════════════════
-function saveMetric() {
+async function saveMetric() {
   const date = document.getElementById('m-date').value;
   const w = parseFloat(document.getElementById('m-weight').value) || null;
   const b = parseFloat(document.getElementById('m-bmi').value)    || null;
   const f = parseFloat(document.getElementById('m-bf').value)     || null;
   if (!date) { alert('Pick a date'); return; }
   if (!w && !b && !f) { alert('Enter at least one value'); return; }
-  const idx = metrics.findIndex(e => e.date === date);
-  const entry = { date, w, b, f };
-  if (idx >= 0) metrics[idx] = entry; else metrics.push(entry);
-  metrics.sort((a,b) => a.date.localeCompare(b.date));
-  saveData();
-  renderMetricTable();
-  toast('Metrics saved!');
+  await upsertMetric(date, w, b, f);
   document.getElementById('m-weight').value = '';
   document.getElementById('m-bmi').value    = '';
   document.getElementById('m-bf').value     = '';
   document.getElementById('m-date').value   = new Date().toISOString().split('T')[0];
 }
 
-function saveMetricsToday() {
+async function saveMetricsToday() {
   const today = new Date().toISOString().split('T')[0];
   const w = parseFloat(document.getElementById('t-weight').value) || null;
   const b = parseFloat(document.getElementById('t-bmi').value)    || null;
   const f = parseFloat(document.getElementById('t-bf').value)     || null;
   if (!w && !b && !f) { alert('Enter at least one value'); return; }
-  const idx = metrics.findIndex(e => e.date === today);
-  const entry = { date:today, w, b, f };
-  if (idx >= 0) metrics[idx] = entry; else metrics.push(entry);
-  metrics.sort((a,b) => a.date.localeCompare(b.date));
-  saveData();
-  toast('Metrics saved!');
+  await upsertMetric(today, w, b, f);
   document.getElementById('t-weight').value = '';
   document.getElementById('t-bmi').value    = '';
   document.getElementById('t-bf').value     = '';
+}
+
+async function upsertMetric(date, w, b, f) {
+  try {
+    toast('Saving…');
+    await sbFetch('metrics', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=representation',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify({ date, weight_lbs: w, bmi: b, body_fat_pct: f })
+    });
+    await loadAll();
+    toast('Metrics saved!');
+  } catch(e) {
+    console.error(e);
+    toast('⚠ Save failed');
+  }
 }
 
 function renderMetricTable() {
@@ -890,15 +947,17 @@ function renderMetricTable() {
       <td>${e.w != null ? e.w+' lb' : '—'}</td>
       <td>${e.b != null ? e.b : '—'}</td>
       <td>${e.f != null ? e.f+'%' : '—'}</td>
-      <td><button class="btn btn-danger" onclick="deleteMetric('${e.date}')">✕</button></td>
+      <td><button class="btn btn-danger" onclick="deleteMetric('${e.id}','${e.date}')">✕</button></td>
     </tr>`).join('')}</tbody></table>`;
 }
 
-function deleteMetric(date) {
+async function deleteMetric(id, date) {
   if (!confirm('Delete entry for '+date+'?')) return;
-  metrics = metrics.filter(e => e.date !== date);
-  saveData(); renderMetricTable();
-  if (document.getElementById('page-progress').classList.contains('active')) renderProgress();
+  try {
+    await sbFetch('metrics?id=eq.'+id, { method: 'DELETE', prefer: '' });
+    await loadAll();
+    if (document.getElementById('page-progress').classList.contains('active')) renderProgress();
+  } catch(e) { toast('⚠ Delete failed'); }
 }
 
 // ═══════════════════════════════════════════════
@@ -913,10 +972,10 @@ function buildMuscleFields() {
     </div>`).join('');
 }
 
-function saveWorkoutLog() {
+async function saveWorkoutLog() {
   const date = document.getElementById('wl-date').value;
   const phase = document.getElementById('wl-phase').value;
-  const day = document.getElementById('wl-day').value;
+  const day = parseInt(document.getElementById('wl-day').value) || null;
   const cycle = document.getElementById('wl-cycle').value;
   const notes = document.getElementById('wl-notes').value.trim();
   if (!date) { alert('Pick a date'); return; }
@@ -926,15 +985,30 @@ function saveWorkoutLog() {
     if (v) muscles[m] = v;
   });
   if (!Object.keys(muscles).length && !notes) { alert('Log at least one set or add a note'); return; }
-  const entry = { date, phase, day, cycle, muscles, notes, ts: Date.now() };
-  const idx = wlogs.findIndex(e => e.date === date && e.day === day);
-  if (idx >= 0) wlogs[idx] = entry; else wlogs.push(entry);
-  wlogs.sort((a,b) => a.date.localeCompare(b.date) || (a.day-b.day));
-  saveData(); renderWLHistory();
-  toast('Session logged!');
-  MUSCLES.forEach(m => document.getElementById('wl-'+m.toLowerCase()).value = '');
-  document.getElementById('wl-notes').value = '';
-  document.getElementById('wl-date').value  = new Date().toISOString().split('T')[0];
+  try {
+    toast('Saving…');
+    // upsert by date + day
+    const existing = wlogs.find(e => e.date === date && e.day === day);
+    if (existing) {
+      await sbFetch('workout_logs?id=eq.'+existing.id, {
+        method: 'PATCH',
+        body: JSON.stringify({ phase, day, cycle: cycle||null, muscles, notes })
+      });
+    } else {
+      await sbFetch('workout_logs', {
+        method: 'POST',
+        body: JSON.stringify({ date, phase, day, cycle: cycle||null, muscles, notes })
+      });
+    }
+    await loadAll();
+    toast('Session logged!');
+    MUSCLES.forEach(m => document.getElementById('wl-'+m.toLowerCase()).value = '');
+    document.getElementById('wl-notes').value = '';
+    document.getElementById('wl-date').value  = new Date().toISOString().split('T')[0];
+  } catch(e) {
+    console.error(e);
+    toast('⚠ Save failed');
+  }
 }
 
 function renderWLHistory() {
@@ -950,14 +1024,16 @@ function renderWLHistory() {
       <td>${e.cycle ? `<span style="color:${CYCLE_COLORS[e.cycle]||'inherit'}">Cycle ${e.cycle}</span>` : '—'}</td>
       <td style="font-size:10px;max-width:140px">${Object.entries(e.muscles||{}).map(([k,v])=>`<span style="display:block;white-space:nowrap">${k}: ${v}</span>`).join('')||'—'}</td>
       <td style="max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted2);font-size:11px">${e.notes||''}</td>
-      <td><button class="btn btn-danger" onclick="deleteWlog('${e.date}','${e.day}')">✕</button></td>
+      <td><button class="btn btn-danger" onclick="deleteWlog('${e.id}','${e.date}',${e.day||0})">✕</button></td>
     </tr>`).join('')}</tbody></table>`;
 }
 
-function deleteWlog(date, day) {
+async function deleteWlog(id, date, day) {
   if (!confirm('Delete session for '+date+' Day '+day+'?')) return;
-  wlogs = wlogs.filter(e => !(e.date===date && e.day===day));
-  saveData(); renderWLHistory();
+  try {
+    await sbFetch('workout_logs?id=eq.'+id, { method: 'DELETE', prefer: '' });
+    await loadAll();
+  } catch(e) { toast('⚠ Delete failed'); }
 }
 
 // ═══════════════════════════════════════════════
@@ -1070,13 +1146,6 @@ function dl(csv, name) {
   a.download=name; a.click();
 }
 
-// ═══════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════
-function saveData() {
-  localStorage.setItem('bbb_metrics', JSON.stringify(metrics));
-  localStorage.setItem('bbb_wlogs',   JSON.stringify(wlogs));
-}
 function toast(msg) {
   const el=document.getElementById('toast');
   el.textContent=msg; el.classList.add('show');
