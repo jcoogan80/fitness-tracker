@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TRAIN — BBB Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0c0e;
+  --s1: #131316;
+  --s2: #1a1a1f;
+  --s3: #222228;
+  --border: #2a2a32;
+  --border2: #333340;
+  --acc: #c8f135;
+  --acc2: #ff4d3a;
+  --acc3: #38d9ff;
+  --text: #efefef;
+  --muted: #6b6b7a;
+  --muted2: #9090a0;
+  --green: #3cffa0;
+  --font-head: 'Oswald', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-body: 'IBM Plex Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 1000; opacity: .5;
+}
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(12,12,14,0.94);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  height: 54px;
+  display: flex; align-items: center;
+  padding: 0 16px; gap: 0;
+}
+.nav-logo {
+  font-family: var(--font-head);
+  font-size: 20px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--acc);
+  margin-right: 20px;
+  flex-shrink: 0;
+}
+.nav-logo span { color: var(--muted); font-weight: 400; font-size: 13px; letter-spacing: 0.08em; }
+.nav-tabs { display: flex; gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab {
+  font-family: var(--font-head);
+  font-size: 12px; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 6px 14px; border-radius: 3px;
+  border: none; background: none; color: var(--muted);
+  cursor: pointer; white-space: nowrap;
+  transition: color .15s, background .15s;
+}
+.nav-tab:hover { color: var(--text); background: var(--s3); }
+.nav-tab.active { color: var(--acc); background: rgba(200,241,53,.07); }
+
+/* ── PAGES ── */
+.page { display: none; padding: 20px 16px 60px; max-width: 860px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* ── TYPOGRAPHY ── */
+.page-title {
+  font-family: var(--font-head);
+  font-size: 36px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  line-height: 1; margin-bottom: 4px;
+}
+.page-title em { color: var(--acc); font-style: normal; }
+.page-sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+.sec-label {
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 500;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 12px;
+}
+.card-title {
+  font-family: var(--font-head);
+  font-size: 16px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-header {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+/* ── FORMS ── */
+.fg { display: flex; flex-direction: column; gap: 4px; }
+.fg label {
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted);
+}
+input[type=text], input[type=number], input[type=date], select, textarea {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 9px 11px;
+  outline: none;
+  transition: border-color .15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--acc); }
+input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.45); cursor: pointer; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6b7a'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* ── BUTTONS ── */
+.btn {
+  font-family: var(--font-head);
+  font-weight: 600; font-size: 12px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 10px 20px; border-radius: 4px;
+  cursor: pointer; border: none;
+  transition: opacity .15s, transform .1s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:active { transform: scale(0.97); }
+.btn-acc { background: var(--acc); color: #000; }
+.btn-acc:hover { opacity: .88; }
+.btn-outline { background: transparent; border: 1px solid var(--border2); color: var(--muted2); }
+.btn-outline:hover { border-color: var(--text); color: var(--text); }
+.btn-sm { font-size: 10px; padding: 5px 10px; }
+.btn-danger { background: transparent; border: 1px solid #2a1a1a; color: #553333; font-size: 10px; padding: 4px 8px; }
+.btn-danger:hover { border-color: var(--acc2); color: var(--acc2); }
+
+/* ── BADGES ── */
+.badge {
+  font-family: var(--font-head);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 2px;
+  display: inline-block;
+}
+.badge-acc { background: var(--acc); color: #000; }
+.badge-outline { border: 1px solid var(--border2); color: var(--muted); }
+.badge-blue { background: rgba(56,217,255,.12); color: var(--acc3); border: 1px solid rgba(56,217,255,.2); }
+.badge-green { background: rgba(60,255,160,.1); color: var(--green); border: 1px solid rgba(60,255,160,.2); }
+
+/* ── STATS ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px; margin-bottom: 20px;
+}
+.stat-box {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 5px; padding: 12px 14px;
+}
+.stat-lbl { font-family: var(--font-mono); font-size: 8px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.stat-val {
+  font-family: var(--font-head);
+  font-size: 26px; font-weight: 700;
+  letter-spacing: .02em; line-height: 1;
+}
+.stat-unit { font-size: 11px; color: var(--muted); margin-left: 2px; font-family: var(--font-mono); }
+.stat-delta { font-family: var(--font-mono); font-size: 9px; margin-top: 4px; }
+.up { color: var(--acc2); }
+.down { color: var(--green); }
+
+/* ── TABLE ── */
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th {
+  font-family: var(--font-mono); font-size: 8px; font-weight: 500;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  text-align: left; padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.data-table td {
+  font-family: var(--font-mono); font-size: 12px;
+  padding: 9px 10px; border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.data-table tr:hover td { background: rgba(255,255,255,.02); }
+.data-table tr:last-child td { border-bottom: none; }
+.tbl-wrap { overflow-x: auto; }
+
+/* ── CHART ── */
+.chart-wrap { position: relative; height: 170px; margin-top: 8px; }
+canvas { width: 100% !important; height: 100% !important; }
+
+/* ── WORKOUT CARDS ── */
+.workout-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.ex-list { list-style: none; }
+.ex-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.ex-item:last-child { border-bottom: none; }
+.ex-num {
+  font-family: var(--font-head); font-size: 24px; font-weight: 700;
+  color: var(--acc); line-height: 1; min-width: 28px; opacity: .55;
+}
+.ex-body { flex: 1; }
+.ex-name { font-family: var(--font-head); font-size: 15px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 2px; }
+.ex-desc { color: var(--muted2); font-size: 12px; line-height: 1.5; }
+.ex-reps { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; padding-top: 3px; }
+
+.set-divider {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--muted); letter-spacing: .12em; text-transform: uppercase;
+  padding: 8px 0;
+}
+.set-divider::before, .set-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border));
+}
+.set-divider::after { background: linear-gradient(270deg, transparent, var(--border)); }
+
+.insta-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--acc3); text-decoration: none; letter-spacing: .06em;
+  padding: 6px 12px; border: 1px solid rgba(56,217,255,.2);
+  border-radius: 3px; transition: background .15s; margin-bottom: 16px;
+}
+.insta-link:hover { background: rgba(56,217,255,.06); }
+
+/* ── BBB SCHEDULE TABLE ── */
+.sched-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sched-table th {
+  font-family: var(--font-head); font-size: 11px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--muted2);
+  padding: 8px 8px; border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.sched-table th:first-child { text-align: left; }
+.sched-table td {
+  padding: 6px 8px; border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono); font-size: 11px;
+  vertical-align: top; text-align: center; color: var(--muted2);
+}
+.sched-table td:first-child { color: var(--acc); font-weight: 500; text-align: left; }
+.sched-table tr:last-child td { border-bottom: none; }
+.mus-tag {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: 9px;
+  background: var(--s3); border: 1px solid var(--border2);
+  border-radius: 2px; padding: 1px 5px;
+  margin: 1px; color: var(--text); white-space: nowrap;
+}
+.mus-tag.main { background: rgba(200,241,53,.1); border-color: rgba(200,241,53,.25); color: var(--acc); }
+.cycle-a { color: var(--green); }
+.cycle-b { color: var(--acc3); }
+.cycle-c { color: var(--acc2); }
+
+/* ── WORKOUT LOG FORM ── */
+.muscle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.muscle-entry { display: flex; flex-direction: column; gap: 4px; }
+.muscle-entry label {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: .15em; text-transform: uppercase; color: var(--muted);
+}
+
+/* ── PROGRESS BARS ── */
+.prog-list { display: flex; flex-direction: column; gap: 12px; }
+.prog-item {}
+.prog-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.prog-name { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.prog-vals { font-family: var(--font-mono); font-size: 10px; }
+.prog-bg { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--acc); border-radius: 2px; transition: width .6s ease; }
+
+/* ── EMPTY ── */
+.empty { text-align: center; padding: 40px 0; }
+.empty-icon { font-size: 36px; opacity: .3; margin-bottom: 10px; }
+.empty-text { font-family: var(--font-head); font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 24px; right: 16px;
+  background: var(--acc); color: #000;
+  font-family: var(--font-head); font-weight: 700; font-size: 12px;
+  letter-spacing: .12em; text-transform: uppercase;
+  padding: 10px 18px; border-radius: 4px;
+  transform: translateY(80px); opacity: 0;
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+  z-index: 999;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── DIVIDER ── */
+hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.spacer { height: 16px; }
+
+/* ── PHASE SELECTOR ── */
+.phase-selector {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;
+}
+.phase-btn {
+  font-family: var(--font-head); font-size: 11px; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 6px 12px; border-radius: 3px;
+  border: 1px solid var(--border2); color: var(--muted);
+  background: none; cursor: pointer;
+  transition: all .15s;
+}
+.phase-btn:hover { border-color: var(--acc); color: var(--acc); }
+.phase-btn.active { background: rgba(200,241,53,.1); border-color: var(--acc); color: var(--acc); }
+
+/* ── COLLAPSIBLE ── */
+.collapse-toggle { cursor: pointer; user-select: none; }
+.collapse-arrow { transition: transform .2s; display: inline-block; color: var(--muted); font-size: 14px; }
+.collapsed .collapse-arrow { transform: rotate(-90deg); }
+
+@media (max-width: 480px) {
+  .grid2, .grid3 { grid-template-columns: 1fr 1fr; }
+  .page-title { font-size: 28px; }
+  nav { padding: 0 12px; }
+  .page { padding: 16px 12px 60px; }
+  .stat-val { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">BBB <span>/ TRAIN</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('today')">Today</button>
+    <button class="nav-tab" onclick="showPage('workouts')">Workouts</button>
+    <button class="nav-tab" onclick="showPage('metrics')">Metrics</button>
+    <button class="nav-tab" onclick="showPage('log')">Workout Log</button>
+    <button class="nav-tab" onclick="showPage('progress')">Progress</button>
+  </div>
+</nav>
+
+<!-- ═══════════ TODAY PAGE ═══════════ -->
+<div class="page active" id="page-today">
+  <div class="page-title">Today's <em>Session</em></div>
+  <div class="page-sub" id="today-date-sub">Loading...</div>
+
+  <!-- quick metrics entry -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Log Metrics</div>
+      <span class="badge badge-acc">Quick Entry</span>
+    </div>
+    <div class="grid3" style="margin-bottom:12px">
+      <div class="fg"><label>Weight (lbs)</label><input type="number" id="t-weight" placeholder="185.0" step="0.1" min="0"></div>
+      <div class="fg"><label>BMI</label><input type="number" id="t-bmi" placeholder="24.5" step="0.1" min="0"></div>
+      <div class="fg"><label>Body Fat %</label><input type="number" id="t-bf" placeholder="18.0" step="0.1" min="0"></div>
+    </div>
+    <button class="btn btn-acc btn-sm" onclick="saveMetricsToday()">Save Metrics</button>
+  </div>
+
+  <!-- today's BBB workout -->
+  <div class="card" id="today-workout-card">
+    <div class="card-header">
+      <div class="card-title">BBB Workout</div>
+      <div id="today-phase-badge"></div>
+    </div>
+    <div id="today-workout-body">
+      <div class="empty"><div class="empty-icon">⚙️</div><div class="empty-text">Set your current phase in Workouts tab</div></div>
+    </div>
+  </div>
+
+  <!-- agility circuit always shown -->
+  <div class="card">
+    <div class="card-header collapse-toggle" onclick="toggleCard('agility-today','agility-arrow')">
+      <div>
+        <div class="sec-label">Daily Add-on</div>
+        <div class="card-title">Agility Circuit</div>
+      </div>
+      <span class="collapse-arrow" id="agility-arrow">▾</span>
+    </div>
+    <div id="agility-today">
+      <div class="workout-meta">
+        <span class="badge badge-acc">3 Sets</span>
+        <span class="badge badge-outline">10 Reps Each</span>
+        <span class="badge badge-outline">10 Push-Ups Between Sets</span>
+      </div>
+      <a class="insta-link" href="https://www.instagram.com/p/DYuezmEkcFY/?img_index=1" target="_blank" rel="noopener">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        View Demo
+      </a>
+      <ul class="ex-list">
+        <li class="ex-item"><div class="ex-num">1</div><div class="ex-body"><div class="ex-name">Ankle Hops</div><div class="ex-desc">Spring off ankles, minimal knee bend, land on balls of feet</div></div><div class="ex-reps">×10</div></li>
+        <li class="ex-item"><div class="ex-num">2</div><div class="ex-body"><div class="ex-name">Squat Jumps</div><div class="ex-desc">Drop into squat, explode up, land soft back into squat</div></div><div class="ex-reps">×10</div></li>
+        <li class="ex-item"><div class="ex-num">3</div><div class="ex-body"><div class="ex-name">Split Jumps</div><div class="ex-desc">Lunge, jump, switch legs in air, land in opposite lunge</div></div><div class="ex-reps">×10</div></li>
+        <li class="ex-item"><div class="ex-num">4</div><div class="ex-body"><div class="ex-name">High Split Jumps</div><div class="ex-desc">Same as split jumps but drive knee higher and jump as tall as possible</div></div><div class="ex-reps">×10</div></li>
+        <li class="ex-item"><div class="ex-num">5</div><div class="ex-body"><div class="ex-name">Continuous Tuck Jumps</div><div class="ex-desc">Jump continuously pulling both knees to chest each rep</div></div><div class="ex-reps">×10</div></li>
+        <li class="ex-item"><div class="ex-num">6</div><div class="ex-body"><div class="ex-name">Kneeling Squat Jumps</div><div class="ex-desc">Start kneeling, explosively swing feet under to land in squat</div></div><div class="ex-reps">×10</div></li>
+        <li class="ex-item"><div class="ex-num">7</div><div class="ex-body"><div class="ex-name">In & Out Jumps w/ Squat</div><div class="ex-desc">Jump feet wide into squat, jump feet together, repeat</div></div><div class="ex-reps">×10</div></li>
+      </ul>
+      <div class="set-divider">Rest · 10 Push-Ups · Repeat × 3 Sets</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ WORKOUTS PAGE ═══════════ -->
+<div class="page" id="page-workouts">
+  <div class="page-title">BBB <em>Program</em></div>
+  <div class="page-sub">Big Beyond Belief — Level 1, 4 Days/Week. Select your current phase:</div>
+
+  <div class="phase-selector" id="phase-selector">
+    <button class="phase-btn" onclick="setPhase('r1w1')" id="pb-r1w1">Ramp 1 · Wk 1</button>
+    <button class="phase-btn" onclick="setPhase('r1w2')" id="pb-r1w2">Ramp 1 · Wk 2</button>
+    <button class="phase-btn" onclick="setPhase('r1w3')" id="pb-r1w3">Ramp 1 · Wk 3</button>
+    <button class="phase-btn" onclick="setPhase('sg1')"  id="pb-sg1">SuperGrowth 1</button>
+    <button class="phase-btn" onclick="setPhase('r2w1')" id="pb-r2w1">Ramp 2 · Wk 1</button>
+    <button class="phase-btn" onclick="setPhase('r2w2')" id="pb-r2w2">Ramp 2 · Wk 2</button>
+    <button class="phase-btn" onclick="setPhase('r2w3')" id="pb-r2w3">Ramp 2 · Wk 3</button>
+    <button class="phase-btn" onclick="setPhase('sg2')"  id="pb-sg2">SuperGrowth 2</button>
+    <button class="phase-btn" onclick="setPhase('r3w1')" id="pb-r3w1">Ramp 3 · Wk 1</button>
+    <button class="phase-btn" onclick="setPhase('r3w2')" id="pb-r3w2">Ramp 3 · Wk 2</button>
+    <button class="phase-btn" onclick="setPhase('r3w3')" id="pb-r3w3">Ramp 3 · Wk 3</button>
+    <button class="phase-btn" onclick="setPhase('sg3')"  id="pb-sg3">SuperGrowth 3</button>
+  </div>
+
+  <div id="workout-phase-display"></div>
+
+  <!-- Agility always last -->
+  <div class="card">
+    <div class="card-header collapse-toggle" onclick="toggleCard('agility-wkt','agility-wkt-arrow')">
+      <div>
+        <div class="sec-label">Daily Add-on · Every Workout Day</div>
+        <div class="card-title">Agility Circuit</div>
+      </div>
+      <span class="collapse-arrow" id="agility-wkt-arrow">▾</span>
+    </div>
+    <div id="agility-wkt">
+      <div class="workout-meta">
+        <span class="badge badge-acc">3 Sets</span>
+        <span class="badge badge-outline">7 Exercises</span>
+        <span class="badge badge-outline">10 Reps Each</span>
+        <span class="badge badge-outline">10 Push-Ups Between Sets</span>
+      </div>
+      <p style="font-size:12px;color:var(--muted2);margin-bottom:12px">Performed after every BBB session. See Today tab for full exercise list.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ METRICS PAGE ═══════════ -->
+<div class="page" id="page-metrics">
+  <div class="page-title">Body <em>Metrics</em></div>
+  <div class="page-sub">Track weight, BMI, and body fat. Log a few times per week — skipping days is fine.</div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Log Entry</div>
+    </div>
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="fg"><label>Date</label><input type="date" id="m-date"></div>
+      <div class="fg"><label>Weight (lbs)</label><input type="number" id="m-weight" placeholder="185.0" step="0.1" min="0"></div>
+    </div>
+    <div class="grid2" style="margin-bottom:14px">
+      <div class="fg"><label>BMI</label><input type="number" id="m-bmi" placeholder="24.5" step="0.1" min="0"></div>
+      <div class="fg"><label>Body Fat %</label><input type="number" id="m-bf" placeholder="18.0" step="0.1" min="0"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-acc" onclick="saveMetric()">Save Entry</button>
+      <button class="btn btn-outline btn-sm" onclick="exportMetricsCSV()">↓ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">History</div>
+    </div>
+    <div id="metric-table-wrap" class="tbl-wrap">
+      <div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No entries yet</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ WORKOUT LOG PAGE ═══════════ -->
+<div class="page" id="page-log">
+  <div class="page-title">Workout <em>Log</em></div>
+  <div class="page-sub">Record sets, reps, and weights for each muscle group after your session.</div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Log Session</div>
+    </div>
+    <div class="grid2" style="margin-bottom:14px">
+      <div class="fg"><label>Date</label><input type="date" id="wl-date"></div>
+      <div class="fg"><label>BBB Phase</label>
+        <select id="wl-phase">
+          <option value="">— select —</option>
+          <option>Ramp 1 · Week 1</option><option>Ramp 1 · Week 2</option><option>Ramp 1 · Week 3</option>
+          <option>SuperGrowth Phase 1</option>
+          <option>Ramp 2 · Week 1</option><option>Ramp 2 · Week 2</option><option>Ramp 2 · Week 3</option>
+          <option>SuperGrowth Phase 2</option>
+          <option>Ramp 3 · Week 1</option><option>Ramp 3 · Week 2</option><option>Ramp 3 · Week 3</option>
+          <option>SuperGrowth Phase 3</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid2" style="margin-bottom:14px">
+      <div class="fg"><label>Day (1–4)</label>
+        <select id="wl-day">
+          <option value="">— select —</option>
+          <option value="1">Day 1</option><option value="2">Day 2</option>
+          <option value="3">Day 3</option><option value="4">Day 4</option>
+        </select>
+      </div>
+      <div class="fg"><label>Cycle Type</label>
+        <select id="wl-cycle">
+          <option value="">— auto —</option>
+          <option value="A">Cycle A — Endurance</option>
+          <option value="B">Cycle B — Strength</option>
+          <option value="C">Cycle C — Power</option>
+        </select>
+      </div>
+    </div>
+    <hr>
+    <div class="sec-label" style="margin-top:12px">Muscle Groups Worked (sets × reps @ weight)</div>
+    <div class="muscle-grid" style="margin:10px 0 14px" id="muscle-fields">
+      <!-- generated -->
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label>Notes</label>
+      <textarea id="wl-notes" rows="2" placeholder="How did it feel? PRs? Energy level..." style="resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-acc" onclick="saveWorkoutLog()">Save Session</button>
+      <button class="btn btn-outline btn-sm" onclick="exportWorkoutCSV()">↓ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Session History</div>
+    </div>
+    <div id="wl-history-wrap" class="tbl-wrap">
+      <div class="empty"><div class="empty-icon">🏋️</div><div class="empty-text">No sessions logged yet</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PROGRESS PAGE ═══════════ -->
+<div class="page" id="page-progress">
+  <div class="page-title">Progress <em>Charts</em></div>
+  <div class="page-sub">Visualize your metrics over time.</div>
+
+  <div class="stats-row" id="prog-stats"></div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:14px">Weight (lbs)</div>
+    <div class="chart-wrap"><canvas id="chart-weight"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:14px">BMI</div>
+    <div class="chart-wrap"><canvas id="chart-bmi"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:14px">Body Fat %</div>
+    <div class="chart-wrap"><canvas id="chart-bf"></canvas></div>
+  </div>
+</div>
+
+<div id="toast">Saved!</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+let metrics = JSON.parse(localStorage.getItem('bbb_metrics') || '[]');
+let wlogs   = JSON.parse(localStorage.getItem('bbb_wlogs')   || '[]');
+let curPhase= localStorage.getItem('bbb_phase') || '';
+
+const MUSCLES = ['Back','Chest','Thighs','Bicep','Tricep','Delts','Calves','Abs'];
+
+// Full BBB Level 1 (4-day/week) program data from scanned charts
+const BBB = {
+  r1w1: { name:'Ramp 1 · Week 1', rest:120,
+    d1:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Bicep',s:3},{m:'Calf',s:3}],
+    d2:[{m:'Delts',s:3},{m:'Tricep',s:3},{m:'Thighs',s:3},{m:'Abs',s:3}],
+    d3:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Thighs',s:3},{m:'Delts',s:1},{m:'Calves',s:2},{m:'Bicep',s:1},{m:'Tricep',s:1}],
+    d4:[{m:'Thighs',s:3},{m:'Chest',s:3},{m:'Back',s:3},{m:'Delts',s:1},{m:'Calf',s:2},{m:'Tricep',s:1},{m:'Bicep',s:1}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  r1w2: { name:'Ramp 1 · Week 2', rest:90,
+    d1:[{m:'Back',s:4},{m:'Chest',s:4},{m:'Bicep',s:4},{m:'Calf',s:4}],
+    d2:[{m:'Delts',s:4},{m:'Tricep',s:4},{m:'Thighs',s:4},{m:'Abs',s:4}],
+    d3:[{m:'Back',s:4},{m:'Chest',s:4},{m:'Thighs',s:4},{m:'Delts',s:1},{m:'Calves',s:2},{m:'Bicep',s:1},{m:'Tricep',s:1}],
+    d4:[{m:'Thighs',s:4},{m:'Chest',s:4},{m:'Back',s:4},{m:'Delts',s:1},{m:'Calf',s:2},{m:'Tricep',s:1},{m:'Bicep',s:1}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  r1w3: { name:'Ramp 1 · Week 3', rest:90,
+    d1:[{m:'Back',s:5},{m:'Chest',s:5},{m:'Bicep',s:5},{m:'Calf',s:5}],
+    d2:[{m:'Delts',s:5},{m:'Tricep',s:5},{m:'Thighs',s:5},{m:'Abs',s:5}],
+    d3:[{m:'Back',s:5},{m:'Chest',s:5},{m:'Thighs',s:5},{m:'Delts',s:2},{m:'Calves',s:2},{m:'Bicep',s:1},{m:'Tricep',s:1}],
+    d4:[{m:'Thighs',s:5},{m:'Chest',s:5},{m:'Back',s:5},{m:'Delts',s:2},{m:'Calf',s:2},{m:'Tricep',s:1},{m:'Bicep',s:1}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  sg1: { name:'SuperGrowth Phase 1', rest:180,
+    d1:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Bicep',s:3},{m:'Calf',s:3}],
+    d2:[{m:'Delts',s:3},{m:'Tricep',s:3},{m:'Thighs',s:3},{m:'Abs',s:3}],
+    d3:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Thighs',s:3},{m:'Delts',s:1},{m:'Calves',s:2},{m:'Bicep',s:1},{m:'Tricep',s:1}],
+    d4:[{m:'Thighs',s:3},{m:'Chest',s:3},{m:'Back',s:3},{m:'Delts',s:1},{m:'Calf',s:2},{m:'Tricep',s:1},{m:'Bicep',s:1}],
+    cycles:['A','A','B','C'], reps:['10-12','10-12','8-10','5-7'] },
+  r2w1: { name:'Ramp 2 · Week 1', rest:150,
+    d1:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Thighs',s:3},{m:'Calf',s:3},{m:'Bicep',s:3}],
+    d2:[{m:'Chest',s:3},{m:'Back',s:3},{m:'Thighs',s:3},{m:'Calf',s:3},{m:'Tricep',s:3}],
+    d3:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Thighs',s:3},{m:'Delts',s:1},{m:'Calves',s:2},{m:'Bicep',s:1},{m:'Tricep',s:1}],
+    d4:[{m:'Thighs',s:3},{m:'Chest',s:3},{m:'Back',s:3},{m:'Delts',s:1},{m:'Calf',s:2},{m:'Tricep',s:1},{m:'Bicep',s:1}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  r2w2: { name:'Ramp 2 · Week 2', rest:90,
+    d1:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Thighs',s:3},{m:'Calves',s:3},{m:'Biceps',s:3}],
+    d2:[{m:'Chest',s:3},{m:'Back',s:3},{m:'Thighs',s:3},{m:'Calf',s:3},{m:'Triceps',s:2}],
+    d3:[{m:'Thighs',s:3},{m:'Chest',s:3},{m:'Back',s:3},{m:'Calf',s:2},{m:'Delts',s:1},{m:'Bicep',s:1},{m:'Tricep',s:1}],
+    d4:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Thighs',s:3},{m:'Delts',s:1},{m:'Calfs',s:2},{m:'Triceps',s:1},{m:'Biceps',s:1}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  r2w3: { name:'Ramp 2 · Week 3', rest:60,
+    d1:[{m:'Back',s:4},{m:'Chest',s:4},{m:'Thighs',s:4},{m:'Calves',s:4},{m:'Bicep',s:4}],
+    d2:[{m:'Chest',s:4},{m:'Back',s:4},{m:'Thighs',s:4},{m:'Calves',s:4},{m:'Tricep',s:3}],
+    d3:[{m:'Back',s:4},{m:'Chest',s:4},{m:'Thighs',s:4},{m:'Calves',s:3},{m:'Delts',s:2},{m:'Tricep',s:1},{m:'Bicep',s:1}],
+    d4:[{m:'Thighs',s:4},{m:'Chest',s:4},{m:'Back',s:4},{m:'Calves',s:3},{m:'Delts',s:2},{m:'Tricep',s:1},{m:'Bicep',s:1}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  sg2: { name:'SuperGrowth Phase 2', rest:90,
+    d1:[{m:'Back',s:4},{m:'Chest',s:4},{m:'Bicep',s:4},{m:'Calf',s:4}],
+    d2:[{m:'Delts',s:4},{m:'Tricep',s:4},{m:'Thighs',s:4},{m:'Abs',s:4}],
+    d3:[{m:'Back',s:4},{m:'Chest',s:4},{m:'Calves',s:2},{m:'Triceps',s:1},{m:'Biceps',s:1}],
+    d4:[{m:'Thighs',s:4},{m:'Chest',s:4},{m:'Delts',s:2},{m:'Calves',s:2},{m:'Tricep',s:1},{m:'Bicep',s:1}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  r3w1: { name:'Ramp 3 · Week 1', rest:180,
+    d1:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Bicep',s:4},{m:'Calf',s:3}],
+    d2:[{m:'Delts',s:4},{m:'Triceps',s:4},{m:'Thighs',s:3},{m:'Abs',s:3}],
+    d3:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Thighs',s:3},{m:'Calf',s:2},{m:'Delts',s:2}],
+    d4:[{m:'Thighs',s:3},{m:'Chest',s:3},{m:'Back',s:3},{m:'Delts',s:2},{m:'Calves',s:2}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  r3w2: { name:'Ramp 3 · Week 2', rest_d1:120, rest_d2:120, rest_d3:90, rest_d4:60, rest:120,
+    d1:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Bicep',s:4},{m:'Calf',s:3}],
+    d2:[{m:'Delts',s:4},{m:'Triceps',s:4},{m:'Thighs',s:3},{m:'Abs',s:3}],
+    d3:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Thighs',s:3},{m:'Calf',s:2},{m:'Delts',s:2}],
+    d4:[{m:'Thighs',s:3},{m:'Chest',s:3},{m:'Back',s:3},{m:'Delts',s:2},{m:'Calves',s:2}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  r3w3: { name:'Ramp 3 · Week 3', rest_d1:120, rest_d2:120, rest_d3:90, rest_d4:60, rest:120,
+    d1:[{m:'Back',s:4},{m:'Chest',s:4},{m:'Bicep',s:5},{m:'Calf',s:4}],
+    d2:[{m:'Delts',s:5},{m:'Triceps',s:5},{m:'Thighs',s:4},{m:'Abs',s:4}],
+    d3:[{m:'Back',s:4},{m:'Chest',s:4},{m:'Thighs',s:4},{m:'Calf',s:2},{m:'Delts',s:2}],
+    d4:[{m:'Thighs',s:4},{m:'Chest',s:4},{m:'Back',s:4},{m:'Delts',s:2},{m:'Calves',s:2}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','10-12','8-10'] },
+  sg3: { name:'SuperGrowth Phase 3', rest_d1:60, rest_d2:60, rest_d3:120, rest_d4:180, rest:60,
+    d1:[{m:'Back',s:4},{m:'Chest',s:4},{m:'Bicep',s:4},{m:'Calf',s:4}],
+    d2:[{m:'Delts',s:4},{m:'Tricep',s:4},{m:'Thighs',s:4},{m:'Abs',s:4}],
+    d3:[{m:'Back',s:3},{m:'Chest',s:3},{m:'Thighs',s:3},{m:'Delts',s:1},{m:'Calves',s:2},{m:'Biceps',s:1},{m:'Tricep',s:1}],
+    d4:[{m:'Thighs',s:3},{m:'Chest',s:3},{m:'Back',s:3},{m:'Delts',s:1},{m:'Calves',s:2},{m:'Triceps',s:1},{m:'Biceps',s:1}],
+    cycles:['A','A','B','C'], reps:['13-15','13-15','8-10','4-6'] },
+};
+
+const CYCLE_COLORS = { A:'var(--green)', B:'var(--acc3)', C:'var(--acc2)' };
+const CYCLE_NAMES  = { A:'Endurance', B:'Strength', C:'Power' };
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+function init() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('m-date').value   = today;
+  document.getElementById('wl-date').value  = today;
+  document.getElementById('today-date-sub').textContent = new Date().toLocaleDateString('en-US', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  buildMuscleFields();
+  renderTodayWorkout();
+  renderMetricTable();
+  renderWLHistory();
+  if (curPhase) { highlightPhaseBtn(curPhase); renderPhaseDisplay(curPhase); }
+}
+init();
+
+// ═══════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (id === 'progress') renderProgress();
+}
+
+// ═══════════════════════════════════════════════
+// COLLAPSE
+// ═══════════════════════════════════════════════
+function toggleCard(bodyId, arrowId) {
+  const body = document.getElementById(bodyId);
+  const arrow = document.getElementById(arrowId);
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(arrow) arrow.style.transform = open ? 'rotate(-90deg)' : '';
+}
+
+// ═══════════════════════════════════════════════
+// PHASE / WORKOUTS
+// ═══════════════════════════════════════════════
+function setPhase(key) {
+  curPhase = key;
+  localStorage.setItem('bbb_phase', key);
+  highlightPhaseBtn(key);
+  renderPhaseDisplay(key);
+  renderTodayWorkout();
+  toast('Phase set: ' + BBB[key].name);
+}
+
+function highlightPhaseBtn(key) {
+  document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('pb-'+key);
+  if (btn) btn.classList.add('active');
+}
+
+function renderPhaseDisplay(key) {
+  const ph = BBB[key];
+  if (!ph) return;
+  const wrap = document.getElementById('workout-phase-display');
+  const days = [ph.d1, ph.d2, ph.d3, ph.d4];
+  let html = `<div class="card">
+    <div class="card-header">
+      <div class="card-title">${ph.name}</div>
+      <span class="badge badge-outline">4 Days / Week</span>
+    </div>
+    <div class="tbl-wrap"><table class="sched-table">
+      <thead><tr><th>Muscle / Sets</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th></tr></thead>
+      <tbody>`;
+
+  // rest row
+  html += `<tr><td style="color:var(--muted)">Rest Period</td>`;
+  days.forEach((_,i) => {
+    const rest = ph['rest_d'+(i+1)] || ph.rest;
+    html += `<td style="color:var(--muted2)">${rest}s</td>`;
+  });
+  html += `</tr>`;
+
+  // cycle row
+  html += `<tr><td style="color:var(--muted)">Cycle / Reps</td>`;
+  days.forEach((_,i) => {
+    const c = ph.cycles[i], r = ph.reps[i];
+    html += `<td><span style="color:${CYCLE_COLORS[c]};font-size:10px">${c}: ${CYCLE_NAMES[c]}</span><br><span style="font-size:10px;color:var(--muted)">${r} reps</span></td>`;
+  });
+  html += `</tr>`;
+
+  // find max muscle rows
+  const maxRows = Math.max(ph.d1.length, ph.d2.length, ph.d3.length, ph.d4.length);
+  for (let r = 0; r < maxRows; r++) {
+    html += `<tr>`;
+    html += `<td style="color:var(--muted);font-size:9px">${r===0?'Exercises':''}</td>`;
+    days.forEach(d => {
+      const e = d[r];
+      html += `<td>${e ? `<span class="mus-tag${r<2?' main':''}">(${e.s}) ${e.m}</span>` : ''}</td>`;
+    });
+    html += `</tr>`;
+  }
+  html += `</tbody></table></div></div>`;
+  wrap.innerHTML = html;
+}
+
+function renderTodayWorkout() {
+  const body = document.getElementById('today-workout-body');
+  const badge = document.getElementById('today-phase-badge');
+  if (!curPhase || !BBB[curPhase]) {
+    body.innerHTML = '<div class="empty"><div class="empty-icon">⚙️</div><div class="empty-text">Set your current phase in Workouts tab</div></div>';
+    badge.innerHTML = '';
+    return;
+  }
+  const ph = BBB[curPhase];
+  badge.innerHTML = `<span class="badge badge-acc">${ph.name}</span>`;
+  const days = [ph.d1, ph.d2, ph.d3, ph.d4];
+  let html = `<p style="font-size:12px;color:var(--muted2);margin-bottom:14px">Select the day you're training today:</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">`;
+  days.forEach((d, i) => {
+    const c = ph.cycles[i], r = ph.reps[i];
+    const rest = ph['rest_d'+(i+1)] || ph.rest;
+    html += `<div onclick="expandDay(${i})" style="cursor:pointer;background:var(--s2);border:1px solid var(--border2);border-radius:5px;padding:12px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--acc)'" onmouseout="this.style.borderColor='var(--border2)'">
+      <div style="font-family:var(--font-head);font-size:13px;font-weight:600;letter-spacing:.08em;margin-bottom:6px">DAY ${i+1}</div>
+      <div style="font-size:10px;color:${CYCLE_COLORS[c]};font-family:var(--font-mono);margin-bottom:4px">Cycle ${c} · ${CYCLE_NAMES[c]}</div>
+      <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono);margin-bottom:6px">${r} reps · ${rest}s rest</div>
+      ${d.map(e=>`<span class="mus-tag" style="margin:1px">(${e.s}) ${e.m}</span>`).join('')}
+    </div>`;
+  });
+  html += `</div><div id="day-expanded"></div>`;
+  body.innerHTML = html;
+}
+
+function expandDay(idx) {
+  const ph = BBB[curPhase];
+  const days = [ph.d1, ph.d2, ph.d3, ph.d4];
+  const d = days[idx];
+  const c = ph.cycles[idx], r = ph.reps[idx];
+  const rest = ph['rest_d'+(idx+1)] || ph.rest;
+  const el = document.getElementById('day-expanded');
+  el.innerHTML = `<div style="background:var(--s2);border:1px solid var(--acc);border-radius:5px;padding:14px;margin-top:4px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-family:var(--font-head);font-size:15px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Day ${idx+1} Detail</div>
+      <div style="display:flex;gap:6px">
+        <span class="badge" style="background:rgba(200,241,53,.1);color:var(--acc);border:1px solid rgba(200,241,53,.3)">Cycle ${c}</span>
+        <span class="badge badge-outline">${rest}s rest</span>
+        <span class="badge badge-outline">${r} reps</span>
+      </div>
+    </div>
+    ${d.map(e=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:12px">
+      <span style="color:var(--text)">${e.m}</span>
+      <span style="color:var(--acc)">${e.s} set${e.s>1?'s':''}</span>
+    </div>`).join('')}
+  </div>`;
+  el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ═══════════════════════════════════════════════
+// METRICS
+// ═══════════════════════════════════════════════
+function saveMetric() {
+  const date = document.getElementById('m-date').value;
+  const w = parseFloat(document.getElementById('m-weight').value) || null;
+  const b = parseFloat(document.getElementById('m-bmi').value)    || null;
+  const f = parseFloat(document.getElementById('m-bf').value)     || null;
+  if (!date) { alert('Pick a date'); return; }
+  if (!w && !b && !f) { alert('Enter at least one value'); return; }
+  const idx = metrics.findIndex(e => e.date === date);
+  const entry = { date, w, b, f };
+  if (idx >= 0) metrics[idx] = entry; else metrics.push(entry);
+  metrics.sort((a,b) => a.date.localeCompare(b.date));
+  saveData();
+  renderMetricTable();
+  toast('Metrics saved!');
+  document.getElementById('m-weight').value = '';
+  document.getElementById('m-bmi').value    = '';
+  document.getElementById('m-bf').value     = '';
+  document.getElementById('m-date').value   = new Date().toISOString().split('T')[0];
+}
+
+function saveMetricsToday() {
+  const today = new Date().toISOString().split('T')[0];
+  const w = parseFloat(document.getElementById('t-weight').value) || null;
+  const b = parseFloat(document.getElementById('t-bmi').value)    || null;
+  const f = parseFloat(document.getElementById('t-bf').value)     || null;
+  if (!w && !b && !f) { alert('Enter at least one value'); return; }
+  const idx = metrics.findIndex(e => e.date === today);
+  const entry = { date:today, w, b, f };
+  if (idx >= 0) metrics[idx] = entry; else metrics.push(entry);
+  metrics.sort((a,b) => a.date.localeCompare(b.date));
+  saveData();
+  toast('Metrics saved!');
+  document.getElementById('t-weight').value = '';
+  document.getElementById('t-bmi').value    = '';
+  document.getElementById('t-bf').value     = '';
+}
+
+function renderMetricTable() {
+  const wrap = document.getElementById('metric-table-wrap');
+  if (!metrics.length) { wrap.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No entries yet</div></div>'; return; }
+  const sorted = [...metrics].reverse();
+  wrap.innerHTML = `<table class="data-table">
+    <thead><tr><th>Date</th><th>Weight</th><th>BMI</th><th>Body Fat</th><th></th></tr></thead>
+    <tbody>${sorted.map(e=>`<tr>
+      <td>${e.date}</td>
+      <td>${e.w != null ? e.w+' lb' : '—'}</td>
+      <td>${e.b != null ? e.b : '—'}</td>
+      <td>${e.f != null ? e.f+'%' : '—'}</td>
+      <td><button class="btn btn-danger" onclick="deleteMetric('${e.date}')">✕</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function deleteMetric(date) {
+  if (!confirm('Delete entry for '+date+'?')) return;
+  metrics = metrics.filter(e => e.date !== date);
+  saveData(); renderMetricTable();
+  if (document.getElementById('page-progress').classList.contains('active')) renderProgress();
+}
+
+// ═══════════════════════════════════════════════
+// WORKOUT LOG
+// ═══════════════════════════════════════════════
+function buildMuscleFields() {
+  const wrap = document.getElementById('muscle-fields');
+  wrap.innerHTML = MUSCLES.map(m => `
+    <div class="muscle-entry">
+      <label>${m}</label>
+      <input type="text" id="wl-${m.toLowerCase()}" placeholder="3×10 @ 135" style="font-size:12px">
+    </div>`).join('');
+}
+
+function saveWorkoutLog() {
+  const date = document.getElementById('wl-date').value;
+  const phase = document.getElementById('wl-phase').value;
+  const day = document.getElementById('wl-day').value;
+  const cycle = document.getElementById('wl-cycle').value;
+  const notes = document.getElementById('wl-notes').value.trim();
+  if (!date) { alert('Pick a date'); return; }
+  const muscles = {};
+  MUSCLES.forEach(m => {
+    const v = document.getElementById('wl-'+m.toLowerCase()).value.trim();
+    if (v) muscles[m] = v;
+  });
+  if (!Object.keys(muscles).length && !notes) { alert('Log at least one set or add a note'); return; }
+  const entry = { date, phase, day, cycle, muscles, notes, ts: Date.now() };
+  const idx = wlogs.findIndex(e => e.date === date && e.day === day);
+  if (idx >= 0) wlogs[idx] = entry; else wlogs.push(entry);
+  wlogs.sort((a,b) => a.date.localeCompare(b.date) || (a.day-b.day));
+  saveData(); renderWLHistory();
+  toast('Session logged!');
+  MUSCLES.forEach(m => document.getElementById('wl-'+m.toLowerCase()).value = '');
+  document.getElementById('wl-notes').value = '';
+  document.getElementById('wl-date').value  = new Date().toISOString().split('T')[0];
+}
+
+function renderWLHistory() {
+  const wrap = document.getElementById('wl-history-wrap');
+  if (!wlogs.length) { wrap.innerHTML = '<div class="empty"><div class="empty-icon">🏋️</div><div class="empty-text">No sessions logged yet</div></div>'; return; }
+  const sorted = [...wlogs].reverse();
+  wrap.innerHTML = `<table class="data-table">
+    <thead><tr><th>Date</th><th>Phase</th><th>Day</th><th>Cycle</th><th>Muscles</th><th>Notes</th><th></th></tr></thead>
+    <tbody>${sorted.map(e=>`<tr>
+      <td>${e.date}</td>
+      <td style="font-size:10px;color:var(--muted2)">${e.phase||'—'}</td>
+      <td style="color:var(--acc)">${e.day?'Day '+e.day:'—'}</td>
+      <td>${e.cycle ? `<span style="color:${CYCLE_COLORS[e.cycle]||'inherit'}">Cycle ${e.cycle}</span>` : '—'}</td>
+      <td style="font-size:10px;max-width:140px">${Object.entries(e.muscles||{}).map(([k,v])=>`<span style="display:block;white-space:nowrap">${k}: ${v}</span>`).join('')||'—'}</td>
+      <td style="max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted2);font-size:11px">${e.notes||''}</td>
+      <td><button class="btn btn-danger" onclick="deleteWlog('${e.date}','${e.day}')">✕</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function deleteWlog(date, day) {
+  if (!confirm('Delete session for '+date+' Day '+day+'?')) return;
+  wlogs = wlogs.filter(e => !(e.date===date && e.day===day));
+  saveData(); renderWLHistory();
+}
+
+// ═══════════════════════════════════════════════
+// PROGRESS
+// ═══════════════════════════════════════════════
+let chartInsts = {};
+
+function renderProgress() {
+  const n = metrics.length;
+  const statsEl = document.getElementById('prog-stats');
+  if (!n) {
+    statsEl.innerHTML = `<div class="stat-box"><div class="stat-lbl">Entries</div><div class="stat-val">0</div></div>`;
+    drawLineChart('chart-weight',[],[],false,'var(--acc)','lbs');
+    drawLineChart('chart-bmi',[],[],false,'var(--acc3)','');
+    drawLineChart('chart-bf',[],[],false,'var(--acc2)','%');
+    return;
+  }
+  const wt = metrics.filter(e=>e.w!=null), bm = metrics.filter(e=>e.b!=null), bf = metrics.filter(e=>e.f!=null);
+  const first = metrics[0], last = metrics[metrics.length-1];
+  let stats = `<div class="stat-box"><div class="stat-lbl">Entries</div><div class="stat-val">${n}</div></div>`;
+  if(wt.length){
+    const fw=wt[0].w, lw=wt[wt.length-1].w, dw=(lw-fw).toFixed(1);
+    const cls = dw>0?'up':'down'; const sign=dw>0?'+':'';
+    stats += `<div class="stat-box"><div class="stat-lbl">Weight Now</div><div class="stat-val">${lw}<span class="stat-unit">lb</span></div><div class="stat-delta ${cls}">${sign}${dw} total</div></div>`;
+    stats += `<div class="stat-box"><div class="stat-lbl">Starting Wt</div><div class="stat-val">${fw}<span class="stat-unit">lb</span></div></div>`;
+  }
+  if(bm.length){ const lb=bm[bm.length-1].b; stats += `<div class="stat-box"><div class="stat-lbl">Current BMI</div><div class="stat-val">${lb}</div></div>`; }
+  if(bf.length){ const lf=bf[bf.length-1].f; stats += `<div class="stat-box"><div class="stat-lbl">Body Fat</div><div class="stat-val">${lf}<span class="stat-unit">%</span></div></div>`; }
+  statsEl.innerHTML = stats;
+  drawLineChart('chart-weight', wt.map(e=>e.date), wt.map(e=>e.w), false, 'var(--acc)', 'lbs');
+  drawLineChart('chart-bmi',    bm.map(e=>e.date), bm.map(e=>e.b), false, 'var(--acc3)', '');
+  drawLineChart('chart-bf',     bf.map(e=>e.date), bf.map(e=>e.f), false, 'var(--acc2)', '%');
+}
+
+function drawLineChart(id, labels, data, _unused, color, unit) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  if (chartInsts[id]) { chartInsts[id] = null; }
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width) return;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  if (!data.length) {
+    ctx.fillStyle = 'var(--muted)'; ctx.font = '11px IBM Plex Mono';
+    ctx.textAlign = 'center'; ctx.fillText('No data yet', W/2, H/2);
+    return;
+  }
+  const pad = {t:12,r:12,b:32,l:48};
+  const cW = W-pad.l-pad.r, cH = H-pad.t-pad.b;
+  const mn = Math.min(...data), mx = Math.max(...data);
+  const rng = mx-mn || 1;
+  const yMin = mn-rng*.12, yMax = mx+rng*.12;
+  const xP = i => pad.l + (data.length>1 ? i/(data.length-1)*cW : cW/2);
+  const yP = v => pad.t + cH - (v-yMin)/(yMax-yMin)*cH;
+  // grid
+  ctx.strokeStyle='#1e1e24'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y = pad.t+i*(cH/4);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+cW,y); ctx.stroke();
+    const val = (yMax-i*(yMax-yMin)/4).toFixed(1);
+    ctx.fillStyle='#555'; ctx.font='9px IBM Plex Mono';
+    ctx.textAlign='right'; ctx.fillText(val+unit, pad.l-5, y+3);
+  }
+  // x labels
+  ctx.fillStyle='#555'; ctx.textAlign='center'; ctx.font='8px IBM Plex Mono';
+  const skip = Math.max(1, Math.floor(labels.length/5));
+  labels.forEach((l,i) => { if(i%skip===0||i===labels.length-1) ctx.fillText(l.slice(5), xP(i), H-pad.b+14); });
+  // fill
+  const grad = ctx.createLinearGradient(0,pad.t,0,pad.t+cH);
+  grad.addColorStop(0, color.replace('var(--acc)','#c8f135').replace('var(--acc3)','#38d9ff').replace('var(--acc2)','#ff4d3a')+'44');
+  grad.addColorStop(1, color.replace('var(--acc)','#c8f135').replace('var(--acc3)','#38d9ff').replace('var(--acc2)','#ff4d3a')+'00');
+  ctx.beginPath(); data.forEach((v,i)=>{ i===0?ctx.moveTo(xP(i),yP(v)):ctx.lineTo(xP(i),yP(v)); });
+  ctx.lineTo(xP(data.length-1),pad.t+cH); ctx.lineTo(pad.l,pad.t+cH); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+  // line
+  const lineCol = color.replace('var(--acc)','#c8f135').replace('var(--acc3)','#38d9ff').replace('var(--acc2)','#ff4d3a');
+  ctx.beginPath(); data.forEach((v,i)=>{ i===0?ctx.moveTo(xP(i),yP(v)):ctx.lineTo(xP(i),yP(v)); });
+  ctx.strokeStyle=lineCol; ctx.lineWidth=2; ctx.stroke();
+  // dots
+  data.forEach((v,i)=>{
+    ctx.beginPath(); ctx.arc(xP(i),yP(v),3,0,Math.PI*2);
+    ctx.fillStyle=lineCol; ctx.fill();
+    ctx.strokeStyle='#0c0c0e'; ctx.lineWidth=1.5; ctx.stroke();
+  });
+  chartInsts[id] = true;
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════
+function exportMetricsCSV() {
+  if(!metrics.length){alert('No data');return;}
+  const rows = metrics.map(e=>[e.date,e.w??'',e.b??'',e.f??''].join(','));
+  dl([['date','weight_lbs','bmi','body_fat_pct'].join(','),...rows].join('\n'), 'metrics.csv');
+}
+function exportWorkoutCSV() {
+  if(!wlogs.length){alert('No data');return;}
+  const rows = wlogs.map(e=>[e.date,e.phase||'',e.day||'',e.cycle||'',
+    MUSCLES.map(m=>e.muscles?.[m]||'').join('|'), e.notes||''].join(','));
+  const hdr = ['date','phase','day','cycle','muscles_sets_reps','notes'].join(',');
+  dl([hdr,...rows].join('\n'), 'workout_log.csv');
+}
+function dl(csv, name) {
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=name; a.click();
+}
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function saveData() {
+  localStorage.setItem('bbb_metrics', JSON.stringify(metrics));
+  localStorage.setItem('bbb_wlogs',   JSON.stringify(wlogs));
+}
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2000);
+}
+window.addEventListener('resize', () => {
+  if(document.getElementById('page-progress').classList.contains('active')) renderProgress();
+});
+</script>
+</body>
+</html>
